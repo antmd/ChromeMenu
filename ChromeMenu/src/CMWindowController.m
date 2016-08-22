@@ -34,13 +34,29 @@
 #define SCROLL_TIMER_INTERVAL 0.05
 #define LINE_SCROLL_AMOUNT 19.0
 
+@interface NSArray(CMMenu)
+-(id)maybeObjectAtIndex:(NSUInteger)idx;
+@end
 
-typedef struct tracking_primitive_s {
+@implementation NSArray(CMMenu)
+-(id)maybeObjectAtIndex:(NSUInteger)idx
+{
+        return (idx < self.count) ? self[idx] : nil;
+}
+@end
+
+
+
+@interface CMTrackingPrimitive : NSObject {
+@public
 	NSRect rect;
 	NSDictionary *userInfo;
 	BOOL mouseInside;
-	struct tracking_primitive_s *next;
-} CMTrackingPrimitive;
+	__weak CMTrackingPrimitive * next;
+}
+@end
+@implementation CMTrackingPrimitive
+@end
 
 
 @interface CMWindowController ()
@@ -60,8 +76,8 @@ typedef struct tracking_primitive_s {
 	NSTimer *_scrollTimer;
 	
 	NSMutableArray *_viewControllers;
-	CMTrackingPrimitive **_trackingPrimitives;
-	CMTrackingPrimitive *_trackingPrimitivesList;
+	NSMutableArray<CMTrackingPrimitive*>* _trackingPrimitives;
+	NSMutableArray<CMTrackingPrimitive *>* _trackingPrimitivesList;
 	
 	BOOL _keepTracking;
 	CMMenuKeyEventInterpreter *_keyEventInterpreter;
@@ -130,6 +146,8 @@ typedef struct tracking_primitive_s {
 		_defaultViewHeight = 19.0;
 		_defaultSeparatorViewHeight = 12.0;
 		_verticalPadding = 4.0;
+                _trackingPrimitives = [NSMutableArray new];
+                _trackingPrimitivesList = [NSMutableArray new];
 		
 		NSNumber *radius = [NSNumber numberWithDouble:[owner borderRadius]];
 		NSArray *radiuses;
@@ -174,28 +192,18 @@ typedef struct tracking_primitive_s {
 		// Post a notification when scroll view scrolled
 //		[[_scrollView contentView] setPostsBoundsChangedNotifications:YES];
 		
-		[documentView release];
-		[contentView release];
+		documentView=nil;
+		contentView=nil;
 		
 //		_keepTracking = NO;
 //		_trackingPrimitives = NULL;
 	}
 	
-	[window release];
+        window=nil;
 	
 	return self;
 }
 
-
-- (void)dealloc {
-	[_viewControllers release];
-	[_topScroller release];
-	[_bottomScroller release];
-	[_scrollView release];
-	[_keyEventInterpreter release];
-	
-	[super dealloc];
-}
 
 
 - (CGFloat)verticalPadding {
@@ -373,9 +381,9 @@ typedef struct tracking_primitive_s {
 		for (NSViewController *viewController in _viewControllers)
 			[viewController.view removeFromSuperview];
 
-		[_viewControllers release];
+		[_viewControllers removeAllObjects];
 	}
-	_viewControllers = [viewControllers retain];
+	_viewControllers = viewControllers;
 
 	
 	NSView *documentView = [_scrollView documentView];
@@ -520,7 +528,6 @@ typedef struct tracking_primitive_s {
 	NSRect documentRect = [documentView bounds];
 	
 	// Retain object before removing from an Array
-	[viewController retain];
 	[_viewControllers removeObjectAtIndex:index];
 	
 	BOOL updateSubviewsWidth = NO;
@@ -562,7 +569,6 @@ typedef struct tracking_primitive_s {
 	}
 	[view removeFromSuperview];
 	[documentView setFrame:NSMakeRect(0, 0, subviewsWidth, documentRect.size.height - size.height)];
-	[viewController release];
 }
 
 
@@ -591,7 +597,6 @@ typedef struct tracking_primitive_s {
 	for (NSViewController *viewController in _viewControllers) {
 		[[viewController view] removeFromSuperview];
 	}
-	[_viewControllers release];
 	_viewControllers = nil;
 	
 	if (_topScroller && [_topScroller superview])
@@ -821,11 +826,15 @@ typedef struct tracking_primitive_s {
 
 #pragma mark -
 #pragma mark ******** Tracking Primitives & Events Handling ********
-
+-(void)_addTrackingPrimitive:(CMTrackingPrimitive*)primitive toList:(NSMutableArray<CMTrackingPrimitive*>*)list
+{
+	primitive->next = list.firstObject;
+	[list insertObject:primitive atIndex:0];
+}
 
 - (void)updateTrackingPrimitivesIgnoreMouse:(BOOL)ignoreMouse {
 //	NSLog(@"update primitives");
-	if (_trackingPrimitivesList) {
+	if (_trackingPrimitivesList.count) {
 		// free all objects
 		[self discardTrackingPrimitivesIgnoreMouse:NO];
 	}
@@ -841,7 +850,7 @@ typedef struct tracking_primitive_s {
 	}
 	
 
-	CMTrackingPrimitive *trackingPrimitivesList = NULL;
+	NSMutableArray<CMTrackingPrimitive *>* trackingPrimitivesList = [NSMutableArray new];
 	for (NSViewController *viewController in _viewControllers) {
 		NSRect frame = [[viewController view] frame];
 		if (frame.origin.y + frame.size.height <= visibleRectMinY)
@@ -869,7 +878,7 @@ typedef struct tracking_primitive_s {
 		if ( !ignoreMouse && NSPointInRect(mouseLocation, rect))
 			mouseInside = YES;
 		
-		CMTrackingPrimitive *primitive = (CMTrackingPrimitive *)malloc(sizeof(CMTrackingPrimitive));
+                CMTrackingPrimitive *primitive = [CMTrackingPrimitive new];
 		if (primitive == NULL) {
 			fputs("CMMenu: out of memmory", stderr);
 			exit(EXIT_FAILURE);
@@ -883,8 +892,7 @@ typedef struct tracking_primitive_s {
 							   [NSNumber numberWithUnsignedInteger:CMMenuEventMouseItem], kUserDataEventTypeKey,
 							   nil];
 		primitive->mouseInside = mouseInside;
-		primitive->next = trackingPrimitivesList;
-		trackingPrimitivesList = primitive;
+                [self _addTrackingPrimitive:primitive toList:trackingPrimitivesList];
 		
 		if (mouseInside)
 			[self mouseEventOnItemView:viewController eventType:CMMenuEventMouseEnteredItem | CMMenuEventDuringTrackingAreaUpdate];
@@ -892,13 +900,11 @@ typedef struct tracking_primitive_s {
 	
 	if (_topScroller && [_topScroller superview]) {
 		CMTrackingPrimitive *primitive = [self trackingPrimitiveForScroller:_topScroller];
-		primitive->next = trackingPrimitivesList;
-		trackingPrimitivesList = primitive;
+                [self _addTrackingPrimitive:primitive toList:trackingPrimitivesList];
 	}
 	if (_bottomScroller && [_bottomScroller superview]) {
 		CMTrackingPrimitive *primitive = [self trackingPrimitiveForScroller:_bottomScroller];
-		primitive->next = trackingPrimitivesList;
-		trackingPrimitivesList = primitive;
+                [self _addTrackingPrimitive:primitive toList:trackingPrimitivesList];
 	}
 	
 	_trackingPrimitivesList = trackingPrimitivesList;
@@ -912,7 +918,7 @@ typedef struct tracking_primitive_s {
 	if (! scroller)
 		return NULL;
 
-	CMTrackingPrimitive *primitive = (CMTrackingPrimitive *)malloc(sizeof(CMTrackingPrimitive));
+	CMTrackingPrimitive *primitive = [CMTrackingPrimitive new];
 	if (primitive == NULL) {
 		fputs("CMMenu: out of memmory", stderr);
 		exit(EXIT_FAILURE);
@@ -958,9 +964,9 @@ typedef struct tracking_primitive_s {
 	NSView *documentView = [_scrollView documentView];
 	CMTrackingPrimitive *currentTrackingPrimitive = NULL;
 	
-	if (_trackingPrimitivesList) {
+	if (_trackingPrimitivesList.count) {
 		CMTrackingPrimitive *primitive;
-		for (primitive = _trackingPrimitivesList; primitive != NULL; primitive = primitive->next) {
+		for (primitive in _trackingPrimitivesList) {
 			NSViewController *vc = [primitive->userInfo objectForKey:kTrackingAreaViewControllerKey];
 			if (viewController == vc) {
 				currentTrackingPrimitive = primitive;
@@ -992,7 +998,7 @@ typedef struct tracking_primitive_s {
 		if ( !ignoreMouse && NSPointInRect(mouseLocation, rect))
 			mouseInside = YES;
 		
-		CMTrackingPrimitive *primitive = (CMTrackingPrimitive *)malloc(sizeof(CMTrackingPrimitive));
+		CMTrackingPrimitive *primitive = [CMTrackingPrimitive new];
 		if (primitive == NULL) {
 			fputs("CMMenu: out of memmory", stderr);
 			exit(EXIT_FAILURE);
@@ -1006,8 +1012,7 @@ typedef struct tracking_primitive_s {
 							   [NSNumber numberWithUnsignedInteger:CMMenuEventMouseItem], kUserDataEventTypeKey,
 							   nil];
 		primitive->mouseInside = mouseInside;
-		primitive->next = _trackingPrimitivesList;
-		_trackingPrimitivesList = primitive;
+                [self _addTrackingPrimitive:primitive toList:_trackingPrimitivesList];
 		
 //		NSLog(@"created new tracking primitive: %@", primitive->userInfo);
 		
@@ -1015,11 +1020,11 @@ typedef struct tracking_primitive_s {
 			[self mouseEventOnItemView:viewController eventType:CMMenuEventMouseEnteredItem | CMMenuEventDuringTrackingAreaUpdate];
 		
 	} else if (currentTrackingPrimitive) {
-		if (currentTrackingPrimitive == _trackingPrimitivesList) {
-			_trackingPrimitivesList = currentTrackingPrimitive->next;
+		if (currentTrackingPrimitive == _trackingPrimitivesList.firstObject) {
+                        [_trackingPrimitivesList removeObjectAtIndex:0];
 		} else {
 			CMTrackingPrimitive *prev_primitive;
-			for (prev_primitive = _trackingPrimitivesList; prev_primitive != NULL; prev_primitive = prev_primitive->next) {
+			for (prev_primitive in _trackingPrimitivesList) {
 				if (prev_primitive->next == currentTrackingPrimitive) {
 					prev_primitive->next = currentTrackingPrimitive->next;
 					break;
@@ -1029,8 +1034,8 @@ typedef struct tracking_primitive_s {
 		
 //		NSLog(@"removing tracking primitive for item: %@", currentTrackingPrimitive->userInfo);
 		
-		[currentTrackingPrimitive->userInfo release];
-		free(currentTrackingPrimitive);
+		currentTrackingPrimitive->userInfo=nil;
+                [_trackingPrimitives removeObjectIdenticalTo:currentTrackingPrimitive];
 	}
 	
 }
@@ -1040,12 +1045,11 @@ typedef struct tracking_primitive_s {
  *
  */
 - (void)discardTrackingPrimitivesIgnoreMouse:(BOOL)ignoreMouse {
-	if (! _trackingPrimitivesList)
+	if (!_trackingPrimitivesList.count)
 		return;
 
 	CMTrackingPrimitive *primitive;
-	CMTrackingPrimitive *next;
-	for (primitive = _trackingPrimitivesList ; primitive != NULL; primitive = next) {
+	for (primitive in _trackingPrimitivesList) {
 		if ( !ignoreMouse && primitive->mouseInside) {
 			NSDictionary *userInfo = primitive->userInfo;
 			CMMenuEventType eventType = [(NSNumber *)[userInfo objectForKey:kUserDataEventTypeKey] unsignedIntegerValue];
@@ -1055,11 +1059,9 @@ typedef struct tracking_primitive_s {
 				[self mouseEventOnItemView:viewController eventType:CMMenuEventMouseExitedItem | CMMenuEventDuringTrackingAreaUpdate];
 			}
 		}
-		[primitive->userInfo release];
-		next = primitive->next;
-		free(primitive);
+		primitive->userInfo=nil;
 	}
-	_trackingPrimitivesList = NULL;
+        [_trackingPrimitivesList removeAllObjects];
 }
 
 
@@ -1077,7 +1079,7 @@ typedef struct tracking_primitive_s {
 	CMTrackingPrimitive *mousedPrimitive = NULL;
 	CMTrackingPrimitive *primitive;
 	
-	for (primitive = _trackingPrimitivesList ; primitive != NULL; primitive = primitive->next) {
+	for (primitive in _trackingPrimitivesList) {
 		if (primitive->mouseInside) {
 			mousedPrimitive = primitive;
 			break;
@@ -1102,7 +1104,7 @@ typedef struct tracking_primitive_s {
 		}
 	} else {
 		CMTrackingPrimitive *trackingPrimitive = NULL;		// find a primitive that currently has mouse inside
-		for (primitive = _trackingPrimitivesList; primitive != NULL; primitive = primitive->next) {
+		for (primitive in _trackingPrimitivesList) {
 //			if (NSPointInRect(mouseLocation, primitive->rect)) {
 			// Originally Item views a drawn on flipped superview and this
 			// flips the "upper" edge inclusion of NSPointInRect.

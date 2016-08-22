@@ -37,7 +37,7 @@
 	[ctx flushGraphics];
 	[NSGraphicsContext restoreGraphicsState];
 	
-	return [rep autorelease];
+	return rep ;
 }
 
 
@@ -51,7 +51,7 @@
 	
 	NSBitmapImageRep *bitmapImageRep = [self bitmapImageRepresentation];
 	
-	CIImage *ciImage = [[[CIImage alloc] initWithBitmapImageRep:bitmapImageRep] autorelease];
+	CIImage *ciImage = [[CIImage alloc] initWithBitmapImageRep:bitmapImageRep];
 	CIFilter *ciFilter = [CIFilter filterWithName:@"CIColorInvert"];
 	[ciFilter setValue:ciImage forKey:@"inputImage"];
 	CIImage *resultImage = [ciFilter valueForKey:@"outputImage"];

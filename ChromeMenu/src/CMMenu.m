@@ -27,7 +27,8 @@ NSString * const CMMenuSuspendStatusDidChangeNotification = @"CMMenuSuspendStatu
 
 
 
-typedef struct {
+@interface tracking_event_t : NSObject {
+        @public
 	int active;
 	NSPoint event_origin;
 	NSRect item_rect;
@@ -46,8 +47,11 @@ typedef struct {
 	CGFloat tanBeta;
 	CGFloat averageVelocity;
 	CGFloat averageDeltaX;
-	
-} tracking_event_t;
+}
+@end;
+
+@implementation tracking_event_t
+@end
 
 
 
@@ -167,14 +171,6 @@ typedef struct {
 //	return self;
 //}
 
-
-- (void)dealloc {
-	[_title release];
-	[_menuItems release];
-	[_underlyingWindowController release];
-	
-	[super dealloc];
-}
 
 
 - (NSString *)title {
@@ -756,8 +752,7 @@ typedef struct {
 
 
 - (void)setDelegate:(id<CMMenuDelegate>)anObject {
-	[_delegate autorelease];
-	_delegate = [anObject retain];
+	_delegate = anObject;
 }
 
 
@@ -1004,7 +999,7 @@ typedef struct {
 		[view setEnabled:[menuItem isEnabled]];
 	}
 
-	return [viewController autorelease];
+	return viewController;
 }
 
 
@@ -1364,7 +1359,7 @@ typedef struct {
 - (void)startTrackingSubmenu:(CMMenu *)submenu forItem:(CMMenuItem *)item {
 	_isTrackingSubmenu = YES;
 	
-	_tracking_event = (tracking_event_t *)malloc(sizeof(tracking_event_t));
+	_tracking_event = [tracking_event_t new];
 	if (_tracking_event == 0) {
 		fputs("Memory exhausted", stderr);
 		exit(EXIT_FAILURE);
@@ -1423,8 +1418,7 @@ typedef struct {
 	}
 	
 	if (_tracking_event) {
-		free(_tracking_event);
-		_tracking_event = NULL;
+		_tracking_event = nil;
 	}
 	
 	if (reasonSuccess == NO) {
@@ -1808,7 +1802,7 @@ typedef struct {
 	}
 	[description appendString:@")"];
 	
-	return [description autorelease];
+	return description;
 }
 
 

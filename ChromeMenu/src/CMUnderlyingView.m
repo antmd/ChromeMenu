@@ -21,16 +21,11 @@
 	self = [super initWithFrame:frameRect];
 	if (self) {
         if (radiuses) {
-			_borderRadiuses = [radiuses retain];
+                _borderRadiuses = radiuses;
         }
 	}
 	
 	return self;
-}
-
-- (void)dealloc {
-	[_borderRadiuses release];
-	[super dealloc];
 }
 
 
@@ -111,8 +106,7 @@
 			radiusesEqual = NO;
 		}
 		
-		[_borderRadiuses release];
-		_borderRadiuses = [radiuses retain];
+		_borderRadiuses = radiuses;
 		if (! radiusesEqual) {
 			[self setNeedsDisplay:YES];
 //			NSLog(@"new radisues are set!!!");
@@ -156,7 +150,7 @@
 	self = [super initWithFrame:frameRect];
 	if (self) {
         if (radiuses) {
-			_borderRadiuses = [radiuses retain];
+			_borderRadiuses = radiuses;
         }
         
         self.blendingMode = NSVisualEffectBlendingModeBehindWindow;
@@ -168,10 +162,6 @@
 	return self;
 }
 
-- (void)dealloc {
-	[_borderRadiuses release];
-	[super dealloc];
-}
 
 
 - (void)drawRect:(NSRect)dirtyRect {	
@@ -256,8 +246,7 @@
 			radiusesEqual = NO;
 		}
 		
-		[_borderRadiuses release];
-		_borderRadiuses = [radiuses retain];
+		_borderRadiuses = radiuses;
 		if (! radiusesEqual) {
 			[self setNeedsDisplay:YES];
 		}

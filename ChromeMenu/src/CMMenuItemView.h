@@ -8,15 +8,9 @@
 
 
 @interface CMMenuItemView : NSView
-{
-@private
-	NSImageView *_state;
-	NSImageView *_icon;
-	NSTextField *_title;
-}
 
-@property (assign) IBOutlet NSImageView *state;
-@property (assign) IBOutlet NSImageView *icon;
-@property (assign) IBOutlet NSTextField *title;
+@property (weak,nonatomic) IBOutlet NSImageView *state;
+@property (weak,nonatomic) IBOutlet NSImageView *icon;
+@property (weak,nonatomic) IBOutlet NSTextField *title;
 
 @end

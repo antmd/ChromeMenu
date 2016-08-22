@@ -61,25 +61,13 @@
 }
 
 
-- (void)dealloc {
-	[_title release];
-	[_icon release];
-	[_offStateImage release];
-	[_onStateImage release];
-	[_mixedStateImage release];
-	[_representedObject release];
-	[_submenu release];
-	
-	[super dealloc];
-}
-
 
 + (CMMenuItem *)separatorItem {
 	CMMenuItem *instance = [[self alloc] init];
 	if (instance) {
 		instance->_isSeparatorItem = YES;
 	}
-	return [instance autorelease];
+	return instance;
 }
 
 
@@ -98,8 +86,6 @@
 	if (_title == aTitle)
 		return;
 	
-	if (_title)
-		[_title release];
 	_title = [aTitle copy];
 	if (_representedViewController)
 		[[(CMMenuItemView *)[_representedViewController view] title] setStringValue:aTitle];
@@ -119,9 +105,6 @@
 
 - (void)setIcon:(NSImage *)anImage {
 	if (_icon != anImage) {
-		if (_icon)
-			[_icon release];
-		
 		_icon = [anImage copy];
 	}
 }
@@ -172,8 +155,7 @@
 //		_offStateImage = [image retain];
 //	else
 //		_offStateImage = nil;
-	[_offStateImage release];
-	_offStateImage = [image retain];
+	_offStateImage = image;
 	if (_representedViewController) {
 		CMMenuItemView *view = (CMMenuItemView *)[_representedViewController view];
 		[[view state] setImage:[self offStateImage]];
@@ -199,8 +181,7 @@
 //	else
 //		_onStateImage = nil;
 
-	[_onStateImage release];
-	_onStateImage = [image retain];
+	_onStateImage = image;
 	if (_representedViewController) {
 		CMMenuItemView *view = (CMMenuItemView *)[_representedViewController view];
 		[[view state] setImage:[self onStateImage]];
@@ -224,8 +205,7 @@
 //		_mixedStateImage = [image retain];
 //	else
 //		_mixedStateImage = nil;
-	[_mixedStateImage release];
-	_mixedStateImage = [image retain];
+	_mixedStateImage = image;
 	if (_representedViewController) {
 		CMMenuItemView *view = (CMMenuItemView *)[_representedViewController view];
 		[[view state] setImage:[self mixedStateImage]];
@@ -267,9 +247,8 @@
 	}
 	
 	if (_submenu != submenu) {
-		[_submenu release];
 		if (submenu) {
-			_submenu = [submenu retain];
+			_submenu = submenu;
 			[_submenu setSupermenu:[self menu]];
 			[_submenu setParentItem:self];
 		} else
@@ -351,8 +330,7 @@
 //	}
 //	if (anObject)
 //		_representedObject = [anObject retain];
-	[_representedObject autorelease];
-	_representedObject = [anObject retain];
+	_representedObject = anObject ;
 }
 
 
@@ -569,7 +547,7 @@
 	else
 		[description appendFormat:@" %@", _title];
 	
-	return [description autorelease];
+	return description;
 }
 
 

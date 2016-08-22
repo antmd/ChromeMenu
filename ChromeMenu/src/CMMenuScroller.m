@@ -22,11 +22,6 @@
 }
 
 
-- (void)dealloc {
-	[super dealloc];
-}
-
-
 
 - (void)drawRect:(NSRect)dirtyRect {
 	[[NSColor colorWithCalibratedWhite:1.0 alpha:0.95] setFill];

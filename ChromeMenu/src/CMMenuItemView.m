@@ -37,13 +37,6 @@
 @synthesize title = _title;
 
 
-- (void)dealloc {
-//	NSLog(@"release item view");
-	[_submenuIconView release];
-	[_submenuIconConstraints release];
-	[super dealloc];
-}
-
 
 - (void)drawRect:(NSRect)dirtyRect {
 //	NSLog(@"Cell View draw rect called. Cell subviews: %@", [self subviews]);
@@ -218,8 +211,8 @@
 		if (_submenuIconView) {
 			[self removeConstraints:_submenuIconConstraints];
 			[_submenuIconView removeFromSuperview];
-			[_submenuIconView release];
-			[_submenuIconConstraints release];
+			_submenuIconView=nil;
+			_submenuIconConstraints=nil;
 		}
 		return;
 	}
@@ -231,7 +224,7 @@
 	NSImage *goRightImage = [NSImage imageNamed:@"ImageNameMenuGoRightTemplate"];
 	if (! goRightImage) {
 //		NSLog(@"createing goRight image");
-		goRightImage = [[[NSImage imageNamed:NSImageNameGoRightTemplate] copy] autorelease];
+		goRightImage = [[NSImage imageNamed:NSImageNameGoRightTemplate] copy];
 		[goRightImage setSize:NSMakeSize(9, 10)];
 		[goRightImage setName:@"ImageNameMenuGoRightTemplate"];
 	}
@@ -285,7 +278,7 @@
 //	[constraints addObjectsFromArray:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|-[_submenuIconView]-|" options:NSLayoutFormatAlignAllCenterY metrics:nil views:NSDictionaryOfVariableBindings(_submenuIconView)]];
 	
 	[self addConstraints:constraints];
-	_submenuIconConstraints = [constraints retain];
+	_submenuIconConstraints = constraints;
 	
 //	[goRightImage setSize:NSMakeSize(9, 9)];
 	
@@ -412,7 +405,7 @@
  *
  */
 - (NSString *)description {
-	NSMutableString *description = [[[NSMutableString alloc] initWithString:[super description]] autorelease];
+	NSMutableString *description = [[NSMutableString alloc] initWithString:[super description]];
 	[description appendString:@" Properties: ("];
 	
 	id currentClass = [self class];
